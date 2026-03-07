@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FLAME – Personalizá tu prenda</title>
+  <meta name="description" content="Configurador de estampado personalizado FLAME. Selecciona tu prenda, sube tu diseño y cotiza al instante." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <style>
+    :root {
+      --black:#000;--red:#ff2a2a;--red-dim:#cc1f1f;
+      --dark:#0d0d0d;--dark-2:#1a1a1a;--dark-3:#262626;--dark-4:#333;
+      --blue:#3b82f6;--blue-bg:rgba(59,130,246,.10);--blue-border:rgba(59,130,246,.35);
+      --white:#fff;--w50:rgba(255,255,255,.50);--w30:rgba(255,255,255,.30);--w20:rgba(255,255,255,.20);
+      --border:rgba(255,255,255,.08);
+      --fd:'Bebas Neue',sans-serif;--fc:'Barlow Condensed',sans-serif;--fb:'Barlow',sans-serif;
+      --nav-h:62px;--sb:312px;--pn:270px;
+      --ease:cubic-bezier(.22,1,.36,1);--t:.28s var(--ease);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{font-size:16px;scroll-behavior:smooth}
+    body{background:var(--black);color:var(--white);font-family:var(--fb);overflow-x:hidden;-webkit-font-smoothing:antialiased;min-height:100vh}
+    img{display:block;max-width:100%}
+    a{color:inherit;text-decoration:none}
+    button{cursor:pointer;font-family:inherit;border:none;background:none}
+    ul{list-style:none}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--dark)}::-webkit-scrollbar-thumb{background:var(--dark-4);border-radius:3px}
+
+    .navbar{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:rgba(0,0,0,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);z-index:200;display:flex;align-items:center}
+    .nav-inner{width:100%;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+    .nav-logo{display:flex;align-items:center;gap:4px}
+    .logo-text{font-family:var(--fd);font-size:1.55rem;letter-spacing:.08em;line-height:1;transition:color var(--t)}
+    .nav-logo:hover .logo-text{color:var(--red)}
+    .logo-dot{width:6px;height:6px;background:var(--red);border-radius:50%;margin-bottom:11px;flex-shrink:0}
+    .nav-title{font-family:var(--fc);font-size:.72rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--w30);border-left:1px solid var(--border);padding-left:1rem}
+    .nav-back{display:flex;align-items:center;gap:.45rem;font-family:var(--fc);font-size:.78rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--w30);transition:color var(--t)}
+    .nav-back:hover{color:var(--white)}
+    .nav-back svg{transition:transform var(--t)}
+    .nav-back:hover svg{transform:translateX(-3px)}
+
+    .app-layout{display:grid;grid-template-columns:var(--sb) 1fr var(--pn);height:calc(100vh - var(--nav-h));margin-top:var(--nav-h);overflow:hidden}
+
+    .sidebar{background:var(--dark);border-right:1px solid var(--border);overflow-y:auto;padding:1.2rem;display:flex;flex-direction:column}
+    .sb-sec{border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1rem}
+    .sb-sec:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0}
+    .sb-lbl{font-family:var(--fc);font-size:.65rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--w30);margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem}
+    .sb-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    .g-grid{display:grid;grid-template-columns:1fr 1fr;gap:.45rem}
+    .g-btn{background:var(--dark-2);border:1px solid var(--border);padding:.65rem .35rem;display:flex;flex-direction:column;align-items:center;gap:.3rem;transition:border-color var(--t),background var(--t);position:relative;overflow:hidden}
+    .g-btn::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red);transform:scaleX(0);transition:transform var(--t)}
+    .g-btn:hover{border-color:rgba(255,42,42,.32)}
+    .g-btn:hover::before,.g-btn.active::before{transform:scaleX(1)}
+    .g-btn.active{border-color:var(--red);background:rgba(255,42,42,.07)}
+    .g-icon{width:36px;height:36px;color:var(--w50);transition:color var(--t)}
+    .g-btn.active .g-icon,.g-btn:hover .g-icon{color:var(--white)}
+    .g-name{font-family:var(--fc);font-size:.66rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--w50);transition:color var(--t);text-align:center}
+    .g-btn.active .g-name,.g-btn:hover .g-name{color:var(--white)}
+
+    .swatches{display:flex;flex-wrap:wrap;gap:.42rem}
+    .swatch{width:25px;height:25px;border-radius:2px;border:2px solid transparent;cursor:pointer;transition:transform var(--t),border-color var(--t);position:relative}
+    .swatch:hover{transform:scale(1.18)}
+    .swatch.active{border-color:var(--white);transform:scale(1.1)}
+    .swatch.active::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.52rem;color:var(--white);text-shadow:0 0 3px rgba(0,0,0,.9)}
+
+    .mode-row{display:grid;grid-template-columns:1fr 1fr;gap:.38rem;margin-bottom:.55rem}
+    .mode-btn{display:flex;align-items:center;justify-content:center;gap:.38rem;background:var(--dark-2);border:1px solid var(--border);color:var(--w50);font-family:var(--fc);font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.58rem .4rem;transition:all var(--t);position:relative;overflow:hidden}
+    .mode-btn::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red);transform:scaleX(0);transition:transform var(--t)}
+    .mode-btn:hover{color:var(--white);border-color:var(--w20)}
+    .mode-btn.active{background:rgba(255,42,42,.09);border-color:var(--red);color:var(--white)}
+    .mode-btn.active::before{transform:scaleX(1)}
+    .mode-btn[data-mode="corporativo"].active{background:var(--blue-bg);border-color:var(--blue)}
+    .mode-btn[data-mode="corporativo"].active::before{background:var(--blue)}
+    .mode-desc{font-family:var(--fc);font-size:.66rem;color:rgba(255,255,255,.24);line-height:1.5}
+
+    .zone-tabs{display:flex;gap:.32rem;margin-bottom:.42rem}
+    .z-tab{flex:1;background:var(--dark-2);border:1px solid var(--border);padding:.48rem .25rem;font-family:var(--fc);font-size:.66rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--w50);transition:all var(--t);text-align:center}
+    .z-tab:hover{color:var(--white);border-color:var(--w20)}
+    .z-tab.active{background:var(--red);border-color:var(--red);color:var(--white)}
+
+    .sub-zones{display:grid;grid-template-columns:1fr 1fr;gap:.38rem;overflow:hidden;max-height:120px;transition:opacity var(--t),max-height .38s var(--ease)}
+    .sub-zones.hidden{opacity:0;max-height:0;pointer-events:none}
+    .sub-btn{background:var(--dark-2);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.2rem;padding:.6rem .3rem;transition:all var(--t);color:var(--w50)}
+    .sub-btn:hover{border-color:var(--w20);color:var(--white)}
+    .sub-btn.active{border-color:var(--red);background:rgba(255,42,42,.08);color:var(--white)}
+    .sub-btn[data-sub="pecho_logo"].active{border-color:var(--blue);background:var(--blue-bg)}
+    .sub-btn span{font-family:var(--fc);font-size:.68rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+    .sub-btn small{font-family:var(--fc);font-size:.56rem;letter-spacing:.05em;color:rgba(255,255,255,.2);text-transform:uppercase}
+    .sub-btn.active small{color:rgba(255,42,42,.65)}
+    .sub-btn[data-sub="pecho_logo"].active small{color:rgba(96,165,250,.75)}
+
+    .size-wrap{overflow:hidden;max-height:200px;transition:opacity var(--t),max-height .38s var(--ease)}
+    .size-wrap.hidden{opacity:0;max-height:0;pointer-events:none}
+    .size-label{font-family:var(--fc);font-size:.65rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--w30);margin:.78rem 0 .55rem;display:flex;align-items:center;gap:.4rem}
+    .size-label::after{content:'';flex:1;height:1px;background:var(--border)}
+    .size-grid{display:grid;grid-template-columns:1fr 1fr;gap:.38rem}
+    .sz-btn{background:var(--dark-2);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:.18rem;padding:.58rem .3rem;transition:all var(--t);color:var(--w50)}
+    .sz-btn:hover{border-color:var(--w20);color:var(--white)}
+    .sz-btn.active{border-color:var(--red);background:rgba(255,42,42,.08);color:var(--white)}
+    .sz-glyph{font-family:var(--fd);line-height:1;color:rgba(255,255,255,.28);transition:color var(--t)}
+    .sz-btn.active .sz-glyph{color:var(--red)}
+    .sz-glyph.s{font-size:.9rem}.sz-glyph.m{font-size:1.15rem}.sz-glyph.l{font-size:1.4rem}.sz-glyph.xl{font-size:1.6rem}
+    .sz-btn span{font-family:var(--fc);font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+    .sz-btn small{font-family:var(--fc);font-size:.55rem;letter-spacing:.04em;color:rgba(255,255,255,.2);text-transform:uppercase}
+
+    .d-lib{display:grid;grid-template-columns:repeat(3,1fr);gap:.42rem;margin-bottom:.65rem}
+    .d-thumb{aspect-ratio:1;background:var(--dark-3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color var(--t),background var(--t);overflow:hidden;padding:.32rem}
+    .d-thumb:hover{border-color:rgba(255,42,42,.45);background:var(--dark-2)}
+    .d-thumb.active{border-color:var(--red)}
+    .d-thumb svg,.d-thumb img{width:100%;height:100%;object-fit:contain}
+
+    .upload{border:1px dashed rgba(255,255,255,.17);padding:.85rem;text-align:center;cursor:pointer;transition:border-color var(--t),background var(--t);display:flex;flex-direction:column;align-items:center;gap:.32rem}
+    .upload:hover{border-color:var(--red);background:rgba(255,42,42,.04)}
+    .upload svg{color:var(--w30);transition:color var(--t)}
+    .upload:hover svg{color:var(--red)}
+    .upload p{font-family:var(--fc);font-size:.68rem;letter-spacing:.07em;color:var(--w30);text-transform:uppercase}
+    .upload input{display:none}
+
+    .c-row{display:flex;align-items:center;gap:.65rem}
+    .c-btn{width:27px;height:27px;background:var(--dark-3);border:1px solid var(--border);color:var(--white);font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background var(--t),border-color var(--t)}
+    .c-btn:hover{background:var(--red);border-color:var(--red)}
+    .c-val{font-family:var(--fd);font-size:1.45rem;color:var(--white);min-width:2ch;text-align:center;line-height:1}
+    .c-lbl{font-family:var(--fc);font-size:.66rem;color:var(--w30);text-transform:uppercase;letter-spacing:.07em}
+
+    .canvas-area{background:var(--dark-2);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    .canvas-area::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+    .canvas-wrap{position:relative;z-index:1}
+    #mockupCanvas{border:1px solid var(--border);box-shadow:0 0 0 1px rgba(255,255,255,.03),0 24px 80px rgba(0,0,0,.65);display:block}
+    .zone-badge{position:absolute;bottom:-1.9rem;left:50%;transform:translateX(-50%);font-family:var(--fc);font-size:.62rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.27);white-space:nowrap;display:flex;align-items:center;gap:.42rem}
+    .zone-badge::before,.zone-badge::after{content:'';width:16px;height:1px;background:rgba(255,255,255,.12)}
+    .zone-badge.corp{color:rgba(96,165,250,.5)}
+    .toolbar{position:absolute;top:1rem;right:1rem;display:flex;flex-direction:column;gap:.32rem;z-index:10}
+    .t-btn{width:33px;height:33px;background:rgba(0,0,0,.72);border:1px solid var(--border);color:var(--w50);display:flex;align-items:center;justify-content:center;transition:all var(--t);backdrop-filter:blur(8px)}
+    .t-btn:hover{border-color:var(--red);color:var(--white);background:rgba(255,42,42,.15)}
+    .t-btn svg{width:13px;height:13px}
+    .view-sw{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);display:flex;gap:.32rem;background:rgba(0,0,0,.72);padding:.28rem;border:1px solid var(--border);backdrop-filter:blur(8px);z-index:10}
+    .v-btn{font-family:var(--fc);font-size:.66rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:.36rem .82rem;background:transparent;border:1px solid transparent;color:var(--w30);transition:all var(--t)}
+    .v-btn:hover{color:var(--white)}
+    .v-btn.active{background:var(--red);color:var(--white);border-color:var(--red)}
+
+    .price-panel{background:var(--dark);border-left:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+    .ph{padding:1.35rem 1.15rem .85rem;border-bottom:1px solid var(--border)}
+    .corp-tag{display:inline-flex;align-items:center;gap:.28rem;font-family:var(--fc);font-size:.6rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;background:var(--blue-bg);border:1px solid var(--blue-border);color:#60a5fa;padding:.17rem .48rem;margin-bottom:.38rem}
+    .corp-tag.hidden{display:none}
+    .price-eyebrow{font-family:var(--fc);font-size:.63rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--red);margin-bottom:.3rem;display:block}
+    .price-big{font-family:var(--fd);font-size:2.7rem;line-height:1;color:var(--white)}
+    .price-big sup{font-size:1rem;color:var(--w30);font-family:var(--fc);vertical-align:super}
+    .price-note{font-family:var(--fc);font-size:.66rem;color:var(--w30);letter-spacing:.07em;margin-top:.2rem}
+    .bd{padding:.85rem 1.15rem;border-bottom:1px solid var(--border)}
+    .bd-lbl{font-family:var(--fc);font-size:.63rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--w30);margin-bottom:.6rem}
+    .bd-row{display:flex;justify-content:space-between;align-items:center;padding:.42rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .bd-row:last-child{border-bottom:none}
+    .bd-n{font-family:var(--fc);font-size:.78rem;color:var(--w50)}
+    .bd-v{font-family:var(--fc);font-size:.8rem;font-weight:600;color:var(--white)}
+    .bd-row.hl .bd-n{color:var(--white)}
+    .bd-row.hl .bd-v{color:var(--red)}
+    .qty-sec{padding:.85rem 1.15rem;border-bottom:1px solid var(--border)}
+    .qty-lbl{font-family:var(--fc);font-size:.63rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--w30);margin-bottom:.6rem}
+    .qty-grid{display:grid;grid-template-columns:1fr 1fr;gap:.32rem}
+    .qty-t{background:var(--dark-2);border:1px solid var(--border);padding:.52rem .35rem;text-align:center;cursor:pointer;transition:all var(--t)}
+    .qty-t:hover{border-color:var(--w20)}
+    .qty-t.active{border-color:var(--red);background:rgba(255,42,42,.08)}
+    .qty-n{display:block;font-family:var(--fd);font-size:1.05rem;line-height:1;color:var(--white)}
+    .qty-s{display:block;font-family:var(--fc);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--w30);margin-top:.1rem}
+    .qty-t.active .qty-s{color:var(--red)}
+    .cfg{padding:.85rem 1.15rem;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:.42rem}
+    .cfg-row{display:flex;align-items:center;gap:.42rem}
+    .cfg-dot{width:5px;height:5px;background:var(--red);border-radius:50%;flex-shrink:0}
+    .cfg-txt{font-family:var(--fc);font-size:.76rem;color:var(--w50)}
+    .cfg-txt strong{color:var(--white);font-weight:600}
+    .cta-area{padding:1.05rem;margin-top:auto;display:flex;flex-direction:column;gap:.5rem}
+    .btn-main{width:100%;background:var(--red);border:2px solid var(--red);color:var(--white);font-family:var(--fc);font-size:.8rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;padding:.82rem;text-align:center;transition:all var(--t);position:relative;overflow:hidden}
+    .btn-main::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,.07);transform:scaleX(0);transform-origin:left;transition:transform .22s ease}
+    .btn-main:hover{background:var(--red-dim);transform:translateY(-1px)}
+    .btn-main:hover::before{transform:scaleX(1)}
+    .btn-sec{width:100%;background:transparent;border:1px solid var(--border);color:var(--w30);font-family:var(--fc);font-size:.74rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:.68rem;text-align:center;transition:all var(--t)}
+    .btn-sec:hover{border-color:var(--w30);color:var(--white)}
+    .pnote{font-size:.65rem;color:rgba(255,255,255,.17);text-align:center;line-height:1.5}
+
+    .m-ov{position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .27s ease;padding:1rem}
+    .m-ov.open{opacity:1;pointer-events:all}
+    .modal{background:var(--dark);border:1px solid var(--border);max-width:490px;width:100%;padding:2.1rem;transform:translateY(13px);transition:transform .3s var(--ease);position:relative;max-height:90vh;overflow-y:auto}
+    .m-ov.open .modal{transform:translateY(0)}
+    .m-close{position:absolute;top:.85rem;right:.85rem;border:1px solid var(--border);width:29px;height:29px;display:flex;align-items:center;justify-content:center;color:var(--w30);transition:all var(--t)}
+    .m-close:hover{border-color:var(--red);color:var(--white)}
+    .m-eyebrow{font-family:var(--fc);font-size:.68rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--red);margin-bottom:.38rem}
+    .m-title{font-family:var(--fd);font-size:2rem;line-height:.95;text-transform:uppercase;margin-bottom:1.5rem}
+    .m-sum{background:var(--dark-2);border:1px solid var(--border);border-left:3px solid var(--red);padding:.85rem 1.05rem;margin-bottom:1.5rem;display:flex;flex-direction:column;gap:.28rem}
+    .m-row{display:flex;justify-content:space-between;font-family:var(--fc);font-size:.78rem}
+    .m-row span:first-child{color:var(--w50)}
+    .m-row span:last-child{color:var(--white);font-weight:600}
+    .m-row.tot span:last-child{color:var(--red);font-size:.92rem}
+    .fg{display:flex;flex-direction:column;gap:.38rem;margin-bottom:.85rem}
+    .fg label{font-family:var(--fc);font-size:.66rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.36)}
+    .fg input,.fg textarea,.fg select{background:var(--dark-2);border:1px solid var(--border);color:var(--white);font-family:var(--fb);font-size:.86rem;padding:.68rem .9rem;outline:none;transition:border-color var(--t);width:100%;border-radius:0;-webkit-appearance:none}
+    .fg input::placeholder,.fg textarea::placeholder{color:rgba(255,255,255,.2)}
+    .fg input:focus,.fg textarea:focus,.fg select:focus{border-color:rgba(255,42,42,.55)}
+    .fg textarea{min-height:72px;resize:vertical}
+    .f-row{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+    .m-submit{width:100%;background:var(--red);border:2px solid var(--red);color:var(--white);font-family:var(--fc);font-size:.85rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding:.9rem;margin-top:.38rem;transition:all var(--t)}
+    .m-submit:hover{background:var(--red-dim);transform:translateY(-1px)}
+    .m-success{text-align:center;padding:.85rem 0;display:none;flex-direction:column;align-items:center;gap:.85rem}
+    .m-success.show{display:flex}
+    .s-icon{width:50px;height:50px;background:rgba(255,42,42,.1);border:1px solid var(--red);display:flex;align-items:center;justify-content:center}
+    .s-title{font-family:var(--fd);font-size:1.85rem;text-transform:uppercase}
+    .s-msg{font-size:.86rem;color:var(--w50);line-height:1.7;max-width:310px}
+
+    .toast{position:fixed;bottom:1.35rem;left:50%;transform:translateX(-50%) translateY(0);background:var(--dark-3);border:1px solid var(--border);padding:.6rem 1.35rem;font-family:var(--fc);font-size:.78rem;letter-spacing:.06em;color:var(--white);z-index:1000;pointer-events:none;opacity:0;transition:opacity .27s ease,transform .27s ease;white-space:nowrap}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+
+    @media(max-width:1080px){:root{--sb:262px;--pn:245px}}
+    @media(max-width:820px){
+      .app-layout{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;height:auto;overflow:visible}
+      .sidebar{border-right:none;border-bottom:1px solid var(--border);max-height:none;overflow:visible}
+      .canvas-area{min-height:70vw;padding:2rem 1rem}
+      .price-panel{border-left:none;border-top:1px solid var(--border)}
+      .toolbar{display:none}
+      .f-row{grid-template-columns:1fr}
+    }
+    @media(max-width:480px){.g-grid{grid-template-columns:repeat(4,1fr)}.modal{padding:1.5rem 1rem}}
+  </style>
+</head>
+<body>
+
+<nav class="navbar" role="navigation" aria-label="FLAME Customizer">
+  <div class="nav-inner">
+    <div style="display:flex;align-items:center;gap:1rem">
+      <a href="index.html" class="nav-logo" aria-label="FLAME inicio">
+        <span class="logo-text">FLAME</span><span class="logo-dot"></span>
+      </a>
+      <span class="nav-title">Personalizador</span>
+    </div>
+    <a href="index.html" class="nav-back">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Volver
+    </a>
+  </div>
+</nav>
+
+<div class="app-layout" role="main">
+
+<aside class="sidebar" aria-label="Configuración">
+  <div class="sb-sec">
+    <p class="sb-lbl">Prenda</p>
+    <div class="g-grid" role="radiogroup">
+      <button class="g-btn active" data-garment="rashguard" role="radio" aria-checked="true">
+        <svg class="g-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14 6l-8 10v6h6v20h24V22h6v-6L34 6H14z" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 6s2 6 10 6 10-6 10-6" stroke-linecap="round"/></svg>
+        <span class="g-name">Rashguard</span>
+      </button>
+      <button class="g-btn" data-garment="hoodie" role="radio" aria-checked="false">
+        <svg class="g-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14 6l-8 10v6h6v20h24V22h6v-6L34 6H14z" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 6s1 8 10 8 10-8 10-8" stroke-linecap="round"/><path d="M18 6c-2 4-2 8 0 10M30 6c2 4 2 8 0 10" stroke-linecap="round"/></svg>
+        <span class="g-name">Hoodie</span>
+      </button>
+      <button class="g-btn" data-garment="tshirt" role="radio" aria-checked="false">
+        <svg class="g-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M16 6L6 14v8h8v20h20V22h8v-8L32 6s-2 6-8 6-8-6-8-6z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="g-name">Camiseta</span>
+      </button>
+      <button class="g-btn" data-garment="shorts" role="radio" aria-checked="false">
+        <svg class="g-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 10h32l-6 28H26l-2-12-2 12H14L8 10z" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10l4-4h24l4 4" stroke-linecap="round"/></svg>
+        <span class="g-name">Shorts</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="sb-sec">
+    <p class="sb-lbl">Color de prenda</p>
+    <div class="swatches" role="radiogroup">
+      <div class="swatch active" data-color="#0d0d0d" style="background:#0d0d0d" role="radio" aria-checked="true" aria-label="Negro" tabindex="0"></div>
+      <div class="swatch" data-color="#2d2d2d" style="background:#2d2d2d" role="radio" aria-checked="false" aria-label="Gris" tabindex="0"></div>
+      <div class="swatch" data-color="#ffffff" style="background:#ffffff" role="radio" aria-checked="false" aria-label="Blanco" tabindex="0"></div>
+      <div class="swatch" data-color="#cc1f1f" style="background:#cc1f1f" role="radio" aria-checked="false" aria-label="Rojo" tabindex="0"></div>
+      <div class="swatch" data-color="#1a2a4a" style="background:#1a2a4a" role="radio" aria-checked="false" aria-label="Azul" tabindex="0"></div>
+      <div class="swatch" data-color="#0f2e1a" style="background:#0f2e1a" role="radio" aria-checked="false" aria-label="Verde" tabindex="0"></div>
+      <div class="swatch" data-color="#1a0f2e" style="background:#1a0f2e" role="radio" aria-checked="false" aria-label="Púrpura" tabindex="0"></div>
+      <div class="swatch" data-color="#2a1a00" style="background:#2a1a00" role="radio" aria-checked="false" aria-label="Café" tabindex="0"></div>
+    </div>
+  </div>
+
+  <div class="sb-sec">
+    <p class="sb-lbl">Tipo de estampado</p>
+    <div class="mode-row" role="radiogroup">
+      <button class="mode-btn active" data-mode="deportivo" role="radio" aria-checked="true">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.8 3.6L14 6.4l-3 2.9.7 4.1L8 11.4l-3.7 2 .7-4.1L2 6.4l4.2-.8z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        Deportivo
+      </button>
+      <button class="mode-btn" data-mode="corporativo" role="radio" aria-checked="false">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.3"/></svg>
+        Corporativo
+      </button>
+    </div>
+    <p class="mode-desc" id="modeDesc">Diseño centrado en pecho, espalda o manga. Ideal para marcas y equipos deportivos.</p>
+  </div>
+
+  <div class="sb-sec">
+    <p class="sb-lbl">Zona</p>
+    <div class="zone-tabs" role="tablist">
+      <button class="z-tab active" data-zone="pecho_centro" role="tab" aria-selected="true">Pecho</button>
+      <button class="z-tab" data-zone="espalda" role="tab" aria-selected="false">Espalda</button>
+      <button class="z-tab" data-zone="manga" role="tab" aria-selected="false">Manga</button>
+    </div>
+    <div class="sub-zones" id="subZones" role="group" aria-label="Posición en pecho">
+      <button class="sub-btn active" data-sub="pecho_centro" aria-pressed="true">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <rect x="2" y="2" width="26" height="26" rx="2" stroke="currentColor" stroke-width=".8" opacity=".22"/>
+          <rect x="7" y="7" width="16" height="16" rx="1.5" fill="currentColor" opacity=".5"/>
+        </svg>
+        <span>Central</span><small>Libre / Grande</small>
+      </button>
+      <button class="sub-btn" data-sub="pecho_logo" aria-pressed="false">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <rect x="2" y="2" width="26" height="26" rx="2" stroke="currentColor" stroke-width=".8" opacity=".22"/>
+          <rect x="4" y="10" width="10" height="10" rx="1.5" fill="currentColor" opacity=".5"/>
+        </svg>
+        <span>Logo izq.</span><small>Corporativo</small>
+      </button>
+    </div>
+    <div class="size-wrap" id="sizeWrap">
+      <p class="size-label">Tamaño del estampado</p>
+      <div class="size-grid" role="radiogroup">
+        <button class="sz-btn" data-size="small" role="radio" aria-checked="false"><span class="sz-glyph s">S</span><span>Pequeño</span><small>≤ 10×10 cm</small></button>
+        <button class="sz-btn active" data-size="medium" role="radio" aria-checked="true"><span class="sz-glyph m">M</span><span>Mediano</span><small>10–20 cm</small></button>
+        <button class="sz-btn" data-size="large" role="radio" aria-checked="false"><span class="sz-glyph l">L</span><span>Grande</span><small>20–30 cm</small></button>
+        <button class="sz-btn" data-size="xlarge" role="radio" aria-checked="false"><span class="sz-glyph xl">XL</span><span>Full front</span><small>30+ cm</small></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-sec">
+    <p class="sb-lbl">Diseño</p>
+    <div class="d-lib" role="list">
+      <button class="d-thumb active" data-design="flame" title="Llama FLAME"><svg viewBox="0 0 60 60" fill="none"><path d="M30 8c0 0-8 10-8 18 0 3 1 6 3 8-1-3 0-6 2-8 0 6 4 12 8 14-1-4 0-8 3-11 2 4 2 8 0 12 4-4 6-10 4-16 2 3 3 7 2 11 4-5 4-12 1-18-2 4-4 8-7 10 1-7 0-14-8-20z" fill="#ff2a2a" opacity=".9"/></svg></button>
+      <button class="d-thumb" data-design="logo_text" title="Texto FLAME"><svg viewBox="0 0 60 60" fill="none"><text x="4" y="36" font-family="sans-serif" font-size="15" font-weight="900" fill="white" letter-spacing="1">FLAME</text></svg></button>
+      <button class="d-thumb" data-design="cross" title="Cruz táctica"><svg viewBox="0 0 60 60" fill="none"><path d="M30 10v40M10 30h40" stroke="white" stroke-width="3" stroke-linecap="round"/></svg></button>
+      <button class="d-thumb" data-design="skull" title="Calavera"><svg viewBox="0 0 60 60" fill="none"><ellipse cx="30" cy="26" rx="14" ry="16" stroke="white" stroke-width="1.5"/><path d="M20 36v8h20v-8" stroke="white" stroke-width="1.5"/><circle cx="24" cy="24" r="4" fill="white" opacity=".6"/><circle cx="36" cy="24" r="4" fill="white" opacity=".6"/></svg></button>
+      <button class="d-thumb" data-design="dragon" title="Dragón"><svg viewBox="0 0 60 60" fill="none"><path d="M10 50c5-10 12-15 20-15 8 0 15 5 20 15" stroke="#ff2a2a" stroke-width="1.5" stroke-linecap="round"/><path d="M30 35c0-10 8-20 8-28-6 4-10 10-10 18-4-4-8-10-6-18C16 14 14 22 18 30c-3-2-6-6-6-12C8 24 10 34 20 38" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="d-thumb" data-design="lightning" title="Rayo"><svg viewBox="0 0 60 60" fill="none"><path d="M36 8L22 32h14L18 52 40 26H26L36 8z" fill="#ff2a2a" stroke="#ff4444" stroke-width="1" stroke-linejoin="round"/></svg></button>
+    </div>
+    <label class="upload" for="uploadInput">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/><polyline points="17 8 12 3 7 8" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke-linecap="round"/></svg>
+      <p>Subir mi diseño</p>
+      <p style="font-size:.58rem;color:rgba(255,255,255,.18)">PNG · SVG · JPG · máx 5MB</p>
+      <input type="file" id="uploadInput" accept="image/*"/>
+    </label>
+  </div>
+
+  <div class="sb-sec">
+    <p class="sb-lbl">Colores de impresión</p>
+    <div class="c-row" role="group">
+      <button class="c-btn" id="colorsMinus" aria-label="Reducir">−</button>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:.06rem">
+        <span class="c-val" id="colorsVal" aria-live="polite">2</span>
+        <span class="c-lbl">colores</span>
+      </div>
+      <button class="c-btn" id="colorsPlus" aria-label="Aumentar">+</button>
+    </div>
+    <p style="font-family:var(--fc);font-size:.64rem;color:rgba(255,255,255,.2);margin-top:.5rem">+ colores = mayor costo de impresión</p>
+  </div>
+</aside>
+
+<section class="canvas-area" aria-label="Vista previa">
+  <div class="canvas-wrap">
+    <canvas id="mockupCanvas" aria-label="Editor de diseño interactivo"></canvas>
+    <div class="zone-badge" id="zoneBadge">Pecho central</div>
+  </div>
+  <div class="toolbar" role="toolbar">
+    <button class="t-btn" id="btnDelete" title="Eliminar"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="t-btn" id="btnFlip" title="Voltear"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M3 5l-2 3 2 3M13 5l2 3-2 3M2 8h4M10 8h4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="t-btn" id="btnCenter" title="Centrar"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="6" height="6"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2" stroke-linecap="round"/></svg></button>
+    <button class="t-btn" id="btnExport" title="Exportar"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 11v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2M8 9V2M5 6l3 3 3-3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <div class="view-sw" role="group">
+    <button class="v-btn active" data-view="front" aria-pressed="true">Frontal</button>
+    <button class="v-btn" data-view="back" aria-pressed="false">Trasera</button>
+  </div>
+</section>
+
+<aside class="price-panel" aria-label="Precio">
+  <div class="ph">
+    <span class="corp-tag hidden" id="corpTag">
+      <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="9" rx="1"/><path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/></svg>
+      Modo corporativo
+    </span>
+    <span class="price-eyebrow">Precio estimado</span>
+    <div class="price-big"><sup>$</sup><span id="priceDisplay">19.990</span></div>
+    <p class="price-note">Por unidad · IVA incluido</p>
+  </div>
+  <div class="bd">
+    <p class="bd-lbl">Desglose</p>
+    <div class="bd-row"><span class="bd-n">Prenda base</span><span class="bd-v" id="pBase">$12.990</span></div>
+    <div class="bd-row"><span class="bd-n">Colores impresión</span><span class="bd-v" id="pColors">$2.000</span></div>
+    <div class="bd-row"><span class="bd-n">Zonas adicionales</span><span class="bd-v" id="pZones">$0</span></div>
+    <div class="bd-row"><span class="bd-n" id="stampLbl">Tamaño del diseño</span><span class="bd-v" id="pStamp">$1.500</span></div>
+    <div class="bd-row hl"><span class="bd-n">Total por unidad</span><span class="bd-v" id="pUnit">$19.990</span></div>
+  </div>
+  <div class="qty-sec">
+    <p class="qty-lbl">Cantidad · descuento por volumen</p>
+    <div class="qty-grid" role="radiogroup">
+      <div class="qty-t" data-qty="1" role="radio" aria-checked="false" tabindex="0"><span class="qty-n">1</span><span class="qty-s">Unitario</span></div>
+      <div class="qty-t active" data-qty="5" role="radio" aria-checked="true" tabindex="0"><span class="qty-n">5–9</span><span class="qty-s">−10%</span></div>
+      <div class="qty-t" data-qty="10" role="radio" aria-checked="false" tabindex="0"><span class="qty-n">10–24</span><span class="qty-s">−20%</span></div>
+      <div class="qty-t" data-qty="25" role="radio" aria-checked="false" tabindex="0"><span class="qty-n">25+</span><span class="qty-s">−35%</span></div>
+    </div>
+  </div>
+  <div class="cfg">
+    <div class="cfg-row"><div class="cfg-dot"></div><span class="cfg-txt"><strong id="cfgGarment">Rashguard</strong></span></div>
+    <div class="cfg-row"><div class="cfg-dot"></div><span class="cfg-txt">Zona: <strong id="cfgZone">Pecho central</strong></span></div>
+    <div class="cfg-row"><div class="cfg-dot"></div><span class="cfg-txt">Estampado: <strong id="cfgSize">Mediano 10–20cm</strong></span></div>
+    <div class="cfg-row"><div class="cfg-dot"></div><span class="cfg-txt"><strong id="cfgColors">2</strong> colores</span></div>
+    <div class="cfg-row"><div class="cfg-dot"></div><span class="cfg-txt">Diseño: <strong id="cfgDesign">Llama FLAME</strong></span></div>
+  </div>
+  <div class="cta-area">
+    <button class="btn-main" id="btnQuote">Solicitar cotización</button>
+    <button class="btn-sec" id="btnExportPreview">Exportar vista previa</button>
+    <p class="pnote">Precio referencial. La cotización formal puede variar según detalles técnicos.</p>
+  </div>
+</aside>
+</div>
+
+<div class="m-ov" id="modalOv" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="modal">
+    <button class="m-close" id="mClose"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l12 12M13 1L1 13" stroke-linecap="round"/></svg></button>
+    <div id="mContent">
+      <p class="m-eyebrow">Solicitud de pedido</p>
+      <h2 class="m-title" id="mTitle">Cotizar<br/>tu diseño.</h2>
+      <div class="m-sum">
+        <div class="m-row"><span>Prenda</span><span id="mG">—</span></div>
+        <div class="m-row"><span>Zona · Diseño</span><span id="mD">—</span></div>
+        <div class="m-row"><span>Estampado</span><span id="mSz">—</span></div>
+        <div class="m-row"><span>Colores</span><span id="mC">—</span></div>
+        <div class="m-row tot"><span>Precio estimado</span><span id="mT">—</span></div>
+      </div>
+      <form id="quoteForm" novalidate>
+        <div class="f-row">
+          <div class="fg"><label for="q-n">Nombre</label><input type="text" id="q-n" placeholder="Tu nombre" required autocomplete="name"/></div>
+          <div class="fg"><label for="q-e">Email</label><input type="email" id="q-e" placeholder="tu@correo.com" required autocomplete="email"/></div>
+        </div>
+        <div class="f-row">
+          <div class="fg"><label for="q-p">Teléfono</label><input type="tel" id="q-p" placeholder="+56 9 ..." autocomplete="tel"/></div>
+          <div class="fg"><label for="q-q">Cantidad</label>
+            <select id="q-q"><option value="1">1 unidad</option><option value="5" selected>5–9 uds</option><option value="10">10–24 uds</option><option value="25">25+ uds</option></select>
+          </div>
+        </div>
+        <div class="fg"><label for="q-notes">Notas adicionales</label><textarea id="q-notes" placeholder="Talla, colores exactos, fecha de entrega..."></textarea></div>
+        <button type="submit" class="m-submit">Enviar solicitud</button>
+      </form>
+    </div>
+    <div class="m-success" id="mSuccess">
+      <div class="s-icon"><svg width="24" height="24" viewBox="0 0 28 28" fill="none" stroke="#ff2a2a" stroke-width="2"><path d="M5 14l7 7 11-11" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h3 class="s-title">¡Solicitud enviada!</h3>
+      <p class="s-msg">Recibirás la cotización formal dentro de las próximas 24 horas.</p>
+      <button class="btn-main" id="mSuccessClose" style="max-width:190px">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+
+const PC = {
+  garments:{
+    rashguard:{name:'Rashguard',base:12990},
+    hoodie:{name:'Hoodie',base:18990},
+    tshirt:{name:'Camiseta',base:8990},
+    shorts:{name:'Shorts',base:11990},
+  },
+  colorCost: 2000,
+  zoneCost:  2500,
+  sizeCost:{ small:0, medium:1500, large:3500, xlarge:6500 },
+  corpCost:  2200,
+  disc:{ 1:0, 5:.10, 10:.20, 25:.35 },
+};
+
+const S = {
+  garment:'rashguard',
+  color:'#0d0d0d',
+  zone:'pecho_centro',
+  mode:'deportivo',
+  design:'flame',
+  colors:2,
+  qty:5,
+  scale:'medium',
+  zones: new Set(['pecho_centro']),
+};
+
+const el = document.getElementById('mockupCanvas');
+function getSize(){
+  const a=document.querySelector('.canvas-area');
+  const w=a?a.clientWidth-56:520;
+  const h=window.innerHeight-175;
+  return Math.max(Math.min(w,h,575),300);
+}
+let sz=getSize();
+el.width=el.height=sz;
+const cv=new fabric.Canvas('mockupCanvas',{backgroundColor:'#1a1a1a',selection:true,preserveObjectStacking:true});
+
+const ZONES={
+  rashguard:{
+    pecho_centro:{x:.19,y:.18,w:.62,h:.60},
+    pecho_logo:  {x:.19,y:.26,w:.22,h:.20},
+    espalda:     {x:.15,y:.17,w:.70,h:.62},
+    manga:       {x:.08,y:.27,w:.14,h:.17},
+  },
+  hoodie:{
+    pecho_centro:{x:.18,y:.21,w:.64,h:.58},
+    pecho_logo:  {x:.17,y:.28,w:.24,h:.21},
+    espalda:     {x:.13,y:.18,w:.74,h:.62},
+    manga:       {x:.06,y:.25,w:.16,h:.19},
+  },
+  tshirt:{
+    pecho_centro:{x:.19,y:.18,w:.62,h:.60},
+    pecho_logo:  {x:.19,y:.26,w:.22,h:.20},
+    espalda:     {x:.15,y:.17,w:.70,h:.60},
+    manga:       {x:.08,y:.26,w:.14,h:.16},
+  },
+  shorts:{
+    pecho_centro:{x:.19,y:.16,w:.62,h:.52},
+    pecho_logo:  {x:.19,y:.20,w:.22,h:.18},
+    espalda:     {x:.17,y:.17,w:.66,h:.50},
+    manga:       {x:.08,y:.42,w:.14,h:.15},
+  },
+};
+
+const SIZE_BOX = {
+  small:  { fw:.32, fh:.30 },
+  medium: { fw:.52, fh:.46 },
+  large:  { fw:.74, fh:.66 },
+  xlarge: { fw:.96, fh:.93 },
+  logo:   { fw:1.0, fh:1.0 },
+};
+
+/* ═══════════════════════════════════════
+   COLOR HELPERS
+═══════════════════════════════════════ */
+function hexToRgb(hex){
+  if(!hex||hex.length<7)return{r:20,g:20,b:20};
+  try{return{r:parseInt(hex.slice(1,3),16),g:parseInt(hex.slice(3,5),16),b:parseInt(hex.slice(5,7),16)};}
+  catch(e){return{r:20,g:20,b:20};}
+}
+function darken(hex,a){
+  const c=hexToRgb(hex);
+  const r=Math.max(0,c.r-a),g=Math.max(0,c.g-a),b=Math.max(0,c.b-a);
+  return'#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0');
+}
+function lighten(hex,a){
+  const c=hexToRgb(hex);
+  const r=Math.min(255,c.r+a),g=Math.min(255,c.g+a),b=Math.min(255,c.b+a);
+  return'#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0');
+}
+function rgba(hex,alpha){
+  const c=hexToRgb(hex);
+  return`rgba(${c.r},${c.g},${c.b},${alpha})`;
+}
+// Returns true if color is light (needs dark outline)
+function isLight(hex){
+  const c=hexToRgb(hex);
+  return(c.r*0.299+c.g*0.587+c.b*0.114)>140;
+}
+
+/* ═══════════════════════════════════════
+   DRAW MOCKUP — improved garment shapes
+═══════════════════════════════════════ */
+function drawMockup(gk, col){
+  cv.clear();
+  cv.backgroundColor='#1a1a1a';
+
+  const s = cv.getWidth();
+  const base   = col;
+  const shadow = darken(col, 38);   // deep shadow folds
+  const shade  = darken(col, 18);   // mid-tone shading
+  const mid    = darken(col, 8);    // subtle crease
+  const hi     = lighten(col, 22);  // highlight (top edge / shoulder ridge)
+  const outline= isLight(col) ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.12)';
+  const seam   = isLight(col) ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.09)';
+
+  const opt = (fill, stroke, sw=0, extra={}) => ({
+    fill, stroke: stroke||null, strokeWidth:sw,
+    selectable:false, evented:false, ...extra
+  });
+
+  if(gk==='rashguard' || gk==='tshirt'){
+    drawShirt(s, base, shadow, shade, mid, hi, outline, seam, gk==='tshirt');
+  } else if(gk==='hoodie'){
+    drawHoodie(s, base, shadow, shade, mid, hi, outline, seam);
+  } else if(gk==='shorts'){
+    drawShorts(s, base, shadow, shade, mid, hi, outline, seam);
+  }
+
+  drawGuide();
+  cv.renderAll();
+}
+
+/* ──────────────────────────────────────
+   SHIRT / RASHGUARD
+   Realistic flat-lay silhouette with:
+   - curved shoulder seams
+   - tapered sleeves
+   - side-seam shading
+   - collar (rashguard = crew neck round, tshirt = crew neck wider)
+────────────────────────────────────── */
+function drawShirt(s, base, shadow, shade, mid, hi, outline, seam, isTshirt){
+  // ── Main body ──
+  // Wide at shoulders, slight waist taper, straight hem
+  const bodyPath = `
+    M ${s*.235} ${s*.195}
+    C ${s*.235} ${s*.190} ${s*.260} ${s*.178} ${s*.310} ${s*.168}
+    C ${s*.360} ${s*.158} ${s*.400} ${s*.155} ${s*.500} ${s*.155}
+    C ${s*.600} ${s*.155} ${s*.640} ${s*.158} ${s*.690} ${s*.168}
+    C ${s*.740} ${s*.178} ${s*.765} ${s*.190} ${s*.765} ${s*.195}
+    L ${s*.790} ${s*.225}
+    L ${s*.820} ${s*.310}
+    L ${s*.820} ${s*.355}
+    L ${s*.780} ${s*.362}
+    L ${s*.780} ${s*.830}
+    C ${s*.780} ${s*.838} ${s*.774} ${s*.844} ${s*.766} ${s*.844}
+    L ${s*.234} ${s*.844}
+    C ${s*.226} ${s*.844} ${s*.220} ${s*.838} ${s*.220} ${s*.830}
+    L ${s*.220} ${s*.362}
+    L ${s*.180} ${s*.355}
+    L ${s*.180} ${s*.310}
+    L ${s*.210} ${s*.225}
+    Z
+  `;
+
+  // ── Left sleeve ──
+  const leftSleeve = `
+    M ${s*.235} ${s*.195}
+    C ${s*.220} ${s*.198} ${s*.195} ${s*.215} ${s*.180} ${s*.238}
+    L ${s*.105} ${s*.370}
+    C ${s*.098} ${s*.385} ${s*.098} ${s*.400} ${s*.105} ${s*.410}
+    L ${s*.118} ${s*.428}
+    C ${s*.124} ${s*.436} ${s*.135} ${s*.438} ${s*.144} ${s*.432}
+    L ${s*.220} ${s*.362}
+    L ${s*.220} ${s*.290}
+    L ${s*.210} ${s*.225}
+    Z
+  `;
+
+  // ── Right sleeve ──
+  const rightSleeve = `
+    M ${s*.765} ${s*.195}
+    C ${s*.780} ${s*.198} ${s*.805} ${s*.215} ${s*.820} ${s*.238}
+    L ${s*.895} ${s*.370}
+    C ${s*.902} ${s*.385} ${s*.902} ${s*.400} ${s*.895} ${s*.410}
+    L ${s*.882} ${s*.428}
+    C ${s*.876} ${s*.436} ${s*.865} ${s*.438} ${s*.856} ${s*.432}
+    L ${s*.780} ${s*.362}
+    L ${s*.780} ${s*.290}
+    L ${s*.790} ${s*.225}
+    Z
+  `;
+
+  // Shadow under left sleeve on body
+  const leftArmShadow = `
+    M ${s*.220} ${s*.220} L ${s*.220} ${s*.380}
+    C ${s*.230} ${s*.370} ${s*.260} ${s*.340} ${s*.285} ${s*.295}
+    C ${s*.295} ${s*.265} ${s*.290} ${s*.230} ${s*.270} ${s*.210}
+    Z
+  `;
+  const rightArmShadow = `
+    M ${s*.780} ${s*.220} L ${s*.780} ${s*.380}
+    C ${s*.770} ${s*.370} ${s*.740} ${s*.340} ${s*.715} ${s*.295}
+    C ${s*.705} ${s*.265} ${s*.710} ${s*.230} ${s*.730} ${s*.210}
+    Z
+  `;
+
+  // ── Collar shapes ──
+  // Crew neck: inner cut, slightly rounded
+  const neckW  = isTshirt ? 0.195 : 0.155; // half-width of neck opening
+  const neckDp = isTshirt ? 0.060 : 0.048; // depth below shoulder line
+  const neckTop= s*0.155;
+  const collarPath = `
+    M ${s*(0.500-neckW)} ${neckTop}
+    C ${s*(0.500-neckW*0.85)} ${neckTop+s*neckDp*0.2}
+      ${s*(0.500-neckW*0.4)} ${neckTop+s*neckDp}
+      ${s*0.500} ${neckTop+s*neckDp}
+    C ${s*(0.500+neckW*0.4)} ${neckTop+s*neckDp}
+      ${s*(0.500+neckW*0.85)} ${neckTop+s*neckDp*0.2}
+      ${s*(0.500+neckW)} ${neckTop}
+    C ${s*(0.500+neckW*0.7)} ${neckTop-s*0.012}
+      ${s*(0.500-neckW*0.7)} ${neckTop-s*0.012}
+      ${s*(0.500-neckW)} ${neckTop}
+    Z
+  `;
+
+  // Center seam (subtle)
+  const centerSeam = [s*.500, s*.225, s*.500, s*.844];
+
+  // Bottom hem line
+  const hemLine = [s*.220, s*.840, s*.780, s*.840];
+
+  // Sleeve end hem
+  const leftHem  = [s*.105,s*.385, s*.145,s*.432];
+  const rightHem = [s*.895,s*.385, s*.855,s*.432];
+
+  // Add shapes — back to front order
+  // Base body
+  cv.add(new fabric.Path(bodyPath, {fill:base, stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  // Side shading
+  cv.add(new fabric.Path(leftArmShadow,  {fill:shade, selectable:false, evented:false, opacity:.60}));
+  cv.add(new fabric.Path(rightArmShadow, {fill:shade, selectable:false, evented:false, opacity:.60}));
+  // Sleeves
+  cv.add(new fabric.Path(leftSleeve,  {fill:base, stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  cv.add(new fabric.Path(rightSleeve, {fill:base, stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  // Sleeve inner-side shading
+  cv.add(new fabric.Path(`M${s*.113}${s*.380}L${s*.145}${s*.427}L${s*.160}${s*.418}L${s*.128}${s*.372}Z`,{fill:shadow,selectable:false,evented:false,opacity:.5}));
+  cv.add(new fabric.Path(`M${s*.887}${s*.380}L${s*.855}${s*.427}L${s*.840}${s*.418}L${s*.872}${s*.372}Z`,{fill:shadow,selectable:false,evented:false,opacity:.5}));
+  // Collar
+  cv.add(new fabric.Path(collarPath, {fill:darken(base,20), stroke:outline, strokeWidth:1, selectable:false, evented:false}));
+  // Seams
+  cv.add(new fabric.Line(centerSeam, {stroke:seam, strokeWidth:1, selectable:false, evented:false}));
+  cv.add(new fabric.Line(hemLine,    {stroke:seam, strokeWidth:1.2, selectable:false, evented:false}));
+  cv.add(new fabric.Line(leftHem,    {stroke:seam, strokeWidth:1, selectable:false, evented:false}));
+  cv.add(new fabric.Line(rightHem,   {stroke:seam, strokeWidth:1, selectable:false, evented:false}));
+  // Shoulder highlight ridge
+  cv.add(new fabric.Path(`M${s*.310}${s*.168}C${s*.400}${s*.155}${s*.600}${s*.155}${s*.690}${s*.168}`,
+    {fill:'transparent',stroke:lighten(base,30),strokeWidth:1.5,selectable:false,evented:false,opacity:.45}));
+}
+
+/* ──────────────────────────────────────
+   HOODIE
+   Key details: hood, front pocket, zipper (optional), kangaroo pocket
+────────────────────────────────────── */
+function drawHoodie(s, base, shadow, shade, mid, hi, outline, seam){
+  // Main body — same shape but longer
+  const bodyPath = `
+    M ${s*.228} ${s*.215}
+    C ${s*.228} ${s*.208} ${s*.252} ${s*.195} ${s*.306} ${s*.184}
+    C ${s*.360} ${s*.172} ${s*.405} ${s*.168} ${s*.500} ${s*.168}
+    C ${s*.595} ${s*.168} ${s*.640} ${s*.172} ${s*.694} ${s*.184}
+    C ${s*.748} ${s*.195} ${s*.772} ${s*.208} ${s*.772} ${s*.215}
+    L ${s*.796} ${s*.248}
+    L ${s*.822} ${s*.330}
+    L ${s*.822} ${s*.368}
+    L ${s*.782} ${s*.375}
+    L ${s*.782} ${s*.855}
+    C ${s*.782} ${s*.863} ${s*.776} ${s*.870} ${s*.768} ${s*.870}
+    L ${s*.232} ${s*.870}
+    C ${s*.224} ${s*.870} ${s*.218} ${s*.863} ${s*.218} ${s*.855}
+    L ${s*.218} ${s*.375}
+    L ${s*.178} ${s*.368}
+    L ${s*.178} ${s*.330}
+    L ${s*.204} ${s*.248}
+    Z
+  `;
+
+  const leftSleeve = `
+    M ${s*.228} ${s*.215}
+    C ${s*.212} ${s*.218} ${s*.186} ${s*.236} ${s*.170} ${s*.262}
+    L ${s*.088} ${s*.400}
+    C ${s*.080} ${s*.416} ${s*.080} ${s*.432} ${s*.090} ${s*.442}
+    L ${s*.105} ${s*.460}
+    C ${s*.112} ${s*.468} ${s*.124} ${s*.470} ${s*.134} ${s*.463}
+    L ${s*.218} ${s*.375}
+    L ${s*.218} ${s*.295}
+    L ${s*.204} ${s*.248}
+    Z
+  `;
+  const rightSleeve = `
+    M ${s*.772} ${s*.215}
+    C ${s*.788} ${s*.218} ${s*.814} ${s*.236} ${s*.830} ${s*.262}
+    L ${s*.912} ${s*.400}
+    C ${s*.920} ${s*.416} ${s*.920} ${s*.432} ${s*.910} ${s*.442}
+    L ${s*.895} ${s*.460}
+    C ${s*.888} ${s*.468} ${s*.876} ${s*.470} ${s*.866} ${s*.463}
+    L ${s*.782} ${s*.375}
+    L ${s*.782} ${s*.295}
+    L ${s*.796} ${s*.248}
+    Z
+  `;
+
+  // Hood — the key element that makes it look like a hoodie
+  // Hood side panels (left and right) visible behind head
+  const hoodLeft = `
+    M ${s*.306} ${s*.184}
+    C ${s*.290} ${s*.175} ${s*.265} ${s*.155} ${s*.255} ${s*.130}
+    C ${s*.248} ${s*.108} ${s*.252} ${s*.085} ${s*.268} ${s*.068}
+    C ${s*.285} ${s*.050} ${s*.310} ${s*.042} ${s*.338} ${s*.042}
+    C ${s*.362} ${s*.042} ${s*.382} ${s*.050} ${s*.396} ${s*.065}
+    L ${s*.418} ${s*.090}
+    C ${s*.426} ${s*.100} ${s*.432} ${s*.115} ${s*.432} ${s*.130}
+    L ${s*.432} ${s*.168}
+    C ${s*.405} ${s*.168} ${s*.360} ${s*.172} ${s*.306} ${s*.184}
+    Z
+  `;
+  const hoodRight = `
+    M ${s*.694} ${s*.184}
+    C ${s*.710} ${s*.175} ${s*.735} ${s*.155} ${s*.745} ${s*.130}
+    C ${s*.752} ${s*.108} ${s*.748} ${s*.085} ${s*.732} ${s*.068}
+    C ${s*.715} ${s*.050} ${s*.690} ${s*.042} ${s*.662} ${s*.042}
+    C ${s*.638} ${s*.042} ${s*.618} ${s*.050} ${s*.604} ${s*.065}
+    L ${s*.582} ${s*.090}
+    C ${s*.574} ${s*.100} ${s*.568} ${s*.115} ${s*.568} ${s*.130}
+    L ${s*.568} ${s*.168}
+    C ${s*.595} ${s*.168} ${s*.640} ${s*.172} ${s*.694} ${s*.184}
+    Z
+  `;
+  // Hood top arch connecting both panels
+  const hoodTop = `
+    M ${s*.338} ${s*.042}
+    C ${s*.360} ${s*.032} ${s*.420} ${s*.022} ${s*.500} ${s*.022}
+    C ${s*.580} ${s*.022} ${s*.640} ${s*.032} ${s*.662} ${s*.042}
+    C ${s*.640} ${s*.052} ${s*.580} ${s*.058} ${s*.500} ${s*.058}
+    C ${s*.420} ${s*.058} ${s*.360} ${s*.052} ${s*.338} ${s*.042}
+    Z
+  `;
+  // Hood inner shadow (opening of hood showing darkness inside)
+  const hoodOpening = `
+    M ${s*.396} ${s*.065}
+    C ${s*.416} ${s*.055} ${s*.456} ${s*.048} ${s*.500} ${s*.048}
+    C ${s*.544} ${s*.048} ${s*.584} ${s*.055} ${s*.604} ${s*.065}
+    C ${s*.588} ${s*.082} ${s*.548} ${s*.092} ${s*.500} ${s*.092}
+    C ${s*.452} ${s*.092} ${s*.412} ${s*.082} ${s*.396} ${s*.065}
+    Z
+  `;
+
+  // Kangaroo front pocket
+  const pocketPath = `
+    M ${s*.310} ${s*.620}
+    L ${s*.310} ${s*.720}
+    C ${s*.310} ${s*.728} ${s*.316} ${s*.734} ${s*.324} ${s*.734}
+    L ${s*.676} ${s*.734}
+    C ${s*.684} ${s*.734} ${s*.690} ${s*.728} ${s*.690} ${s*.720}
+    L ${s*.690} ${s*.620}
+    C ${s*.690} ${s*.612} ${s*.684} ${s*.606} ${s*.676} ${s*.606}
+    L ${s*.324} ${s*.606}
+    C ${s*.316} ${s*.606} ${s*.310} ${s*.612} ${s*.310} ${s*.620}
+    Z
+  `;
+
+  const leftArmShadow  = `M${s*.218}${s*.230}L${s*.218}${s*.385}C${s*.228}${s*.374}${s*.258}${s*.342}${s*.282}${s*.296}C${s*.292}${s*.265}${s*.287}${s*.230}${s*.265}${s*.210}Z`;
+  const rightArmShadow = `M${s*.782}${s*.230}L${s*.782}${s*.385}C${s*.772}${s*.374}${s*.742}${s*.342}${s*.718}${s*.296}C${s*.708}${s*.265}${s*.713}${s*.230}${s*.735}${s*.210}Z`;
+
+  // Draw back-to-front
+  cv.add(new fabric.Path(bodyPath,  {fill:base, stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  cv.add(new fabric.Path(leftArmShadow,  {fill:shade, selectable:false, evented:false, opacity:.58}));
+  cv.add(new fabric.Path(rightArmShadow, {fill:shade, selectable:false, evented:false, opacity:.58}));
+  cv.add(new fabric.Path(leftSleeve,  {fill:base, stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  cv.add(new fabric.Path(rightSleeve, {fill:base, stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  // Hood panels (behind = darker)
+  cv.add(new fabric.Path(hoodLeft,  {fill:shade, stroke:outline, strokeWidth:1, selectable:false, evented:false}));
+  cv.add(new fabric.Path(hoodRight, {fill:shade, stroke:outline, strokeWidth:1, selectable:false, evented:false}));
+  cv.add(new fabric.Path(hoodTop,   {fill:darken(base,12), stroke:outline, strokeWidth:1, selectable:false, evented:false}));
+  cv.add(new fabric.Path(hoodOpening,{fill:darken(base,55), stroke:outline, strokeWidth:1, selectable:false, evented:false}));
+  // Pocket
+  cv.add(new fabric.Path(pocketPath, {fill:darken(base,10), stroke:seam, strokeWidth:1.2, selectable:false, evented:false}));
+  // Pocket center seam
+  cv.add(new fabric.Line([s*.500,s*.606,s*.500,s*.734], {stroke:seam, strokeWidth:1, selectable:false, evented:false}));
+  // Center body seam
+  cv.add(new fabric.Line([s*.500,s*.248,s*.500,s*.870],  {stroke:seam, strokeWidth:1, selectable:false, evented:false}));
+  // Hem
+  cv.add(new fabric.Line([s*.218,s*.864,s*.782,s*.864],  {stroke:seam, strokeWidth:1.2, selectable:false, evented:false}));
+  // Sleeve hems
+  cv.add(new fabric.Line([s*.088,s*.416,s*.132,s*.462],  {stroke:seam, strokeWidth:1, selectable:false, evented:false}));
+  cv.add(new fabric.Line([s*.912,s*.416,s*.868,s*.462],  {stroke:seam, strokeWidth:1, selectable:false, evented:false}));
+  // Shoulder highlight
+  cv.add(new fabric.Path(`M${s*.306}${s*.184}C${s*.405}${s*.168}${s*.595}${s*.168}${s*.694}${s*.184}`,
+    {fill:'transparent',stroke:lighten(base,28),strokeWidth:1.5,selectable:false,evented:false,opacity:.40}));
+  // Sleeve inner edge shading
+  cv.add(new fabric.Path(`M${s*.095}${s*.412}L${s*.130}${s*.460}L${s*.148}${s*.450}L${s*.112}${s*.404}Z`,{fill:shadow,selectable:false,evented:false,opacity:.5}));
+  cv.add(new fabric.Path(`M${s*.905}${s*.412}L${s*.870}${s*.460}L${s*.852}${s*.450}L${s*.888}${s*.404}Z`,{fill:shadow,selectable:false,evented:false,opacity:.5}));
+}
+
+/* ──────────────────────────────────────
+   SHORTS
+   MMA/grappling board shorts style:
+   - drawstring waistband
+   - two legs with inseam
+   - side seam panels
+────────────────────────────────────── */
+function drawShorts(s, base, shadow, shade, mid, hi, outline, seam){
+  // Waistband
+  const waistband = `
+    M ${s*.155} ${s*.165}
+    L ${s*.155} ${s*.238}
+    C ${s*.155} ${s*.246} ${s*.161} ${s*.252} ${s*.169} ${s*.252}
+    L ${s*.831} ${s*.252}
+    C ${s*.839} ${s*.252} ${s*.845} ${s*.246} ${s*.845} ${s*.238}
+    L ${s*.845} ${s*.165}
+    C ${s*.845} ${s*.157} ${s*.839} ${s*.150} ${s*.831} ${s*.150}
+    L ${s*.169} ${s*.150}
+    C ${s*.161} ${s*.150} ${s*.155} ${s*.157} ${s*.155} ${s*.165}
+    Z
+  `;
+
+  // Left leg — wide at top, tapers toward hem, slight flare
+  const leftLeg = `
+    M ${s*.155} ${s*.252}
+    L ${s*.142} ${s*.560}
+    C ${s*.138} ${s*.600} ${s*.140} ${s*.640} ${s*.148} ${s*.670}
+    L ${s*.162} ${s*.720}
+    C ${s*.170} ${s*.742} ${s*.182} ${s*.752} ${s*.196} ${s*.750}
+    L ${s*.220} ${s*.748}
+    C ${s*.235} ${s*.746} ${s*.248} ${s*.732} ${s*.254} ${s*.712}
+    L ${s*.290} ${s*.580}
+    C ${s*.310} ${s*.510} ${s*.320} ${s*.440} ${s*.316} ${s*.370}
+    L ${s*.310} ${s*.252}
+    Z
+  `;
+
+  // Right leg
+  const rightLeg = `
+    M ${s*.845} ${s*.252}
+    L ${s*.858} ${s*.560}
+    C ${s*.862} ${s*.600} ${s*.860} ${s*.640} ${s*.852} ${s*.670}
+    L ${s*.838} ${s*.720}
+    C ${s*.830} ${s*.742} ${s*.818} ${s*.752} ${s*.804} ${s*.750}
+    L ${s*.780} ${s*.748}
+    C ${s*.765} ${s*.746} ${s*.752} ${s*.732} ${s*.746} ${s*.712}
+    L ${s*.710} ${s*.580}
+    C ${s*.690} ${s*.510} ${s*.680} ${s*.440} ${s*.684} ${s*.370}
+    L ${s*.690} ${s*.252}
+    Z
+  `;
+
+  // Center crotch panel connecting the two legs
+  const crotchPanel = `
+    M ${s*.310} ${s*.252}
+    L ${s*.316} ${s*.370}
+    C ${s*.318} ${s*.420} ${s*.310} ${s*.470} ${s*.295} ${s*.510}
+    L ${s*.260} ${s*.600}
+    C ${s*.250} ${s*.625} ${s*.248} ${s*.650} ${s*.256} ${s*.672}
+    L ${s*.272} ${s*.715}
+    C ${s*.278} ${s*.730} ${s*.290} ${s*.740} ${s*.304} ${s*.740}
+    L ${s*.330} ${s*.738}
+    C ${s*.344} ${s*.736} ${s*.354} ${s*.726} ${s*.358} ${s*.712}
+    L ${s*.390} ${s*.620}
+    L ${s*.500} ${s*.570}
+    L ${s*.610} ${s*.620}
+    L ${s*.642} ${s*.712}
+    C ${s*.646} ${s*.726} ${s*.656} ${s*.736} ${s*.670} ${s*.738}
+    L ${s*.696} ${s*.740}
+    C ${s*.710} ${s*.740} ${s*.722} ${s*.730} ${s*.728} ${s*.715}
+    L ${s*.744} ${s*.672}
+    C ${s*.752} ${s*.650} ${s*.750} ${s*.625} ${s*.740} ${s*.600}
+    L ${s*.705} ${s*.510}
+    C ${s*.690} ${s*.470} ${s*.682} ${s*.420} ${s*.684} ${s*.370}
+    L ${s*.690} ${s*.252}
+    Z
+  `;
+
+  // Side shading strips on legs
+  const leftLegShade  = `M${s*.155}${s*.252}L${s*.142}${s*.560}L${s*.175}${s*.548}L${s*.185}${s*.252}Z`;
+  const rightLegShade = `M${s*.845}${s*.252}L${s*.858}${s*.560}L${s*.825}${s*.548}L${s*.815}${s*.252}Z`;
+
+  // Drawstring
+  const drawLeft  = [s*.385, s*.195, s*.465, s*.222];
+  const drawRight = [s*.615, s*.195, s*.535, s*.222];
+
+  // Draw order
+  // Legs behind center
+  cv.add(new fabric.Path(leftLeg,  {fill:base, stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  cv.add(new fabric.Path(rightLeg, {fill:base, stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  cv.add(new fabric.Path(leftLegShade,  {fill:shadow, selectable:false, evented:false, opacity:.45}));
+  cv.add(new fabric.Path(rightLegShade, {fill:shadow, selectable:false, evented:false, opacity:.45}));
+  // Center panel on top
+  cv.add(new fabric.Path(crotchPanel, {fill:base, stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  // Inner inseam shadow
+  cv.add(new fabric.Path(`M${s*.290}${s*.390}C${s*.310}${s*.430}${s*.360}${s*.500}${s*.390}${s*.620}L${s*.370}${s*.622}C${s*.338}${s*.505}${s*.288}${s*.432}${s*.270}${s*.390}Z`,
+    {fill:shade,selectable:false,evented:false,opacity:.5}));
+  cv.add(new fabric.Path(`M${s*.710}${s*.390}C${s*.690}${s*.430}${s*.640}${s*.500}${s*.610}${s*.620}L${s*.630}${s*.622}C${s*.662}${s*.505}${s*.712}${s*.432}${s*.730}${s*.390}Z`,
+    {fill:shade,selectable:false,evented:false,opacity:.5}));
+  // Waistband on top of everything
+  cv.add(new fabric.Path(waistband, {fill:darken(base,14), stroke:outline, strokeWidth:1.2, selectable:false, evented:false}));
+  // Waistband inner line
+  cv.add(new fabric.Line([s*.155,s*.236,s*.845,s*.236], {stroke:seam, strokeWidth:1, selectable:false, evented:false}));
+  // Drawstring
+  cv.add(new fabric.Line(drawLeft,  {stroke:lighten(base,35), strokeWidth:1.5, selectable:false, evented:false, opacity:.7, strokeLineCap:'round'}));
+  cv.add(new fabric.Line(drawRight, {stroke:lighten(base,35), strokeWidth:1.5, selectable:false, evented:false, opacity:.7, strokeLineCap:'round'}));
+  // Drawstring knot dot
+  cv.add(new fabric.Circle({left:s*.497,top:s*.212,radius:s*.010,fill:lighten(base,40),selectable:false,evented:false,opacity:.75}));
+  // Leg hem lines
+  cv.add(new fabric.Path(`M${s*.148}${s*.668}C${s*.155}${s*.688}${s*.168}${s*.700}${s*.185}${s*.700}`,{fill:'transparent',stroke:seam,strokeWidth:1.2,selectable:false,evented:false}));
+  cv.add(new fabric.Path(`M${s*.852}${s*.668}C${s*.845}${s*.688}${s*.832}${s*.700}${s*.815}${s*.700}`,{fill:'transparent',stroke:seam,strokeWidth:1.2,selectable:false,evented:false}));
+  cv.add(new fabric.Path(`M${s*.262}${s*.698}C${s*.272}${s*.716}${s*.286}${s*.724}${s*.302}${s*.722}`,{fill:'transparent',stroke:seam,strokeWidth:1.2,selectable:false,evented:false}));
+  cv.add(new fabric.Path(`M${s*.738}${s*.698}C${s*.728}${s*.716}${s*.714}${s*.724}${s*.698}${s*.722}`,{fill:'transparent',stroke:seam,strokeWidth:1.2,selectable:false,evented:false}));
+}
+
+/* ═══════════════════════════════════════
+   ZONE GUIDE
+═══════════════════════════════════════ */
+let gRect=null,gLabel=null,gOuter=null;
+function drawGuide(){
+  [gOuter,gRect,gLabel].forEach(o=>{if(o)cv.remove(o);});
+  gOuter=gRect=gLabel=null;
+  const s=cv.getWidth();
+  const z=ZONES[S.garment]?.[S.zone];
+  if(!z)return;
+  const corp=S.zone==='pecho_logo';
+
+  if(!corp && S.zone==='pecho_centro'){
+    gOuter=new fabric.Rect({
+      left:s*z.x,top:s*z.y,width:s*z.w,height:s*z.h,
+      fill:'transparent',stroke:'rgba(255,255,255,.07)',
+      strokeWidth:1,strokeDashArray:[2,6],rx:3,ry:3,
+      selectable:false,evented:false
+    });
+    cv.add(gOuter);
+  }
+
+  const sb = SIZE_BOX[corp?'logo':S.scale] || SIZE_BOX.medium;
+  const bw = s*z.w*sb.fw;
+  const bh = s*z.h*sb.fh;
+  const bx = s*z.x + (s*z.w - bw)/2;
+  const by = s*z.y + (s*z.h - bh)/2;
+
+  gRect=new fabric.Rect({
+    left:bx,top:by,width:bw,height:bh,
+    fill:corp?'rgba(59,130,246,.05)':'rgba(255,42,42,.04)',
+    stroke:corp?'rgba(59,130,246,.45)':'rgba(255,42,42,.38)',
+    strokeWidth:1.5,strokeDashArray:[5,4],rx:3,ry:3,
+    selectable:false,evented:false
+  });
+
+  const sizeLabels={small:'PEQUEÑO ≤10cm',medium:'MEDIANO 10–20cm',large:'GRANDE 20–30cm',xlarge:'FULL FRONT 30+cm'};
+  const lblTxt = corp
+    ? 'LOGO CORPORATIVO · PECHO IZQ.'
+    : (S.zone==='pecho_centro' ? (sizeLabels[S.scale]||'PECHO CENTRAL') : S.zone.toUpperCase());
+
+  gLabel=new fabric.Text(lblTxt,{
+    left:bx+6,top:by+5,
+    fontSize:Math.max(s*.016,7.5),
+    fill:corp?'rgba(96,165,250,.55)':'rgba(255,80,80,.55)',
+    fontFamily:'Barlow Condensed,sans-serif',fontWeight:'700',
+    selectable:false,evented:false,charSpacing:60
+  });
+
+  cv.add(gRect);cv.add(gLabel);
+  [gOuter,gRect,gLabel].forEach(o=>{if(o)cv.bringToFront(o);});
+  cv.getObjects().forEach(o=>{if(o.isDsgn)cv.bringToFront(o);});
+}
+
+/* ═══════════════════════════════════════
+   DESIGN SVGs
+═══════════════════════════════════════ */
+const SVGS={
+  flame:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><path d="M30 5c0 0-10 12-10 22 0 4 1 7 3 9-1-3 0-7 3-9 0 7 4 14 9 16-1-4 0-9 3-12 2 4 2 9 0 13 5-4 7-12 5-19 2 3 3 8 2 12 5-6 5-14 1-20-2 5-4 9-8 12 1-8 0-16-8-24z" fill="#ff2a2a"/></svg>`,
+  logo_text:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40"><text x="4" y="30" font-family="Arial Black,sans-serif" font-size="28" font-weight="900" fill="white" letter-spacing="3">FLAME</text></svg>`,
+  cross:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><path d="M30 8v44M8 30h44" stroke="white" stroke-width="5" stroke-linecap="round"/></svg>`,
+  skull:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><ellipse cx="30" cy="26" rx="14" ry="16" fill="white" opacity=".9"/><rect x="20" y="36" width="20" height="8" rx="2" fill="white" opacity=".9"/><circle cx="24" cy="23" r="5" fill="#0d0d0d"/><circle cx="36" cy="23" r="5" fill="#0d0d0d"/><line x1="27" y1="38" x2="27" y2="44" stroke="#0d0d0d" stroke-width="1.5"/><line x1="30" y1="38" x2="30" y2="44" stroke="#0d0d0d" stroke-width="1.5"/><line x1="33" y1="38" x2="33" y2="44" stroke="#0d0d0d" stroke-width="1.5"/></svg>`,
+  dragon:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><path d="M10 50c5-12 14-18 20-16 6 2 14 8 20 16" stroke="#ff2a2a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M30 34c0-12 9-22 9-32-7 5-12 12-12 20-4-5-9-12-7-20C12 10 10 22 15 30c-3-3-7-7-7-14C4 24 6 36 16 40" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  lightning:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><path d="M38 5L20 32h16L16 55 44 24H28L38 5z" fill="#ff2a2a" stroke="#ff4444" stroke-width="1"/></svg>`,
+};
+
+function getActiveBox(){
+  const s=cv.getWidth();
+  const z=ZONES[S.garment]?.[S.zone]||{x:.24,y:.22,w:.52,h:.52};
+  const corp=S.zone==='pecho_logo';
+  const sb=SIZE_BOX[corp?'logo':S.scale]||SIZE_BOX.medium;
+  const bw=s*z.w*sb.fw, bh=s*z.h*sb.fh;
+  const bx=s*z.x+(s*z.w-bw)/2;
+  const by=s*z.y+(s*z.h-bh)/2;
+  return{x:bx,y:by,w:bw,h:bh,cx:bx+bw/2,cy:by+bh/2,corp};
+}
+
+let aObj=null;
+
+function addDesign(key){
+  cv.getObjects().forEach(o=>{if(o.isDsgn)cv.remove(o);});
+  aObj=null;
+  if(!SVGS[key])return;
+  const box=getActiveBox();
+  const fitF=box.corp?0.80:0.75;
+  fabric.loadSVGFromString(SVGS[key],function(objs,opts){
+    const g=fabric.util.groupSVGElements(objs,opts);
+    const sc=Math.min(box.w/g.width,box.h/g.height)*fitF;
+    g.scale(sc);
+    g.set({left:box.cx,top:box.cy,originX:'center',originY:'center',selectable:true,hasControls:true,hasBorders:true,
+      borderColor:box.corp?'rgba(59,130,246,.7)':'rgba(255,42,42,.7)',
+      cornerColor:box.corp?'#3b82f6':'#ff2a2a',cornerSize:8,transparentCorners:false});
+    g.isDsgn=true;
+    cv.add(g);cv.setActiveObject(g);cv.bringToFront(g);cv.renderAll();
+    aObj=g;syncScale();
+  });
+}
+
+document.getElementById('uploadInput').addEventListener('change',function(e){
+  const f=e.target.files[0]; if(!f)return;
+  if(f.size>5*1024*1024){showToast('Archivo demasiado grande. Máx 5MB');return;}
+  const r=new FileReader();
+  r.onload=ev=>{
+    fabric.Image.fromURL(ev.target.result,img=>{
+      cv.getObjects().forEach(o=>{if(o.isDsgn)cv.remove(o);});
+      const box=getActiveBox();
+      const fitF=box.corp?0.78:0.75;
+      const sc=Math.min(box.w/img.width,box.h/img.height)*fitF;
+      img.scale(sc);
+      img.set({left:box.cx,top:box.cy,originX:'center',originY:'center',selectable:true,hasControls:true,hasBorders:true,
+        borderColor:box.corp?'rgba(59,130,246,.7)':'rgba(255,42,42,.7)',
+        cornerColor:box.corp?'#3b82f6':'#ff2a2a',cornerSize:8,transparentCorners:false});
+      img.isDsgn=true;
+      cv.add(img);cv.setActiveObject(img);cv.bringToFront(img);cv.renderAll();
+      aObj=img;S.design='custom';updateSummary();updatePrice();showToast('Diseño cargado ✓');
+    });
+  };
+  r.readAsDataURL(f); this.value='';
+});
+
+function syncScale(){
+  if(!aObj||S.zone==='pecho_logo')return;
+  const s=cv.getWidth();
+  const z=ZONES[S.garment]?.[S.zone];if(!z)return;
+  const fullArea=s*z.w*s*z.h;
+  const dArea=aObj.getScaledWidth()*aObj.getScaledHeight();
+  const ratio=dArea/fullArea;
+  const ns=ratio<.04?'small':ratio<.13?'medium':ratio<.32?'large':'xlarge';
+  if(ns!==S.scale){S.scale=ns;syncSizeBtns();drawGuide();updatePrice();updateSummary();}
+}
+function syncSizeBtns(){
+  document.querySelectorAll('.sz-btn').forEach(b=>{b.classList.toggle('active',b.dataset.size===S.scale);b.setAttribute('aria-checked',String(b.dataset.size===S.scale));});
+  drawGuide();
+}
+cv.on('object:scaling',syncScale);
+cv.on('object:modified',syncScale);
+
+/* ═══════════════════════════════════════
+   PRICING
+═══════════════════════════════════════ */
+function calc(){
+  let p=PC.garments[S.garment].base;
+  p+=Math.max(0,S.colors-1)*PC.colorCost;
+  p+=Math.max(0,S.zones.size-1)*PC.zoneCost;
+  const sc=S.zone==='pecho_logo'?PC.corpCost:(PC.sizeCost[S.scale]||0);
+  p+=sc;
+  return{base:PC.garments[S.garment].base,colors:Math.max(0,S.colors-1)*PC.colorCost,zones:Math.max(0,S.zones.size-1)*PC.zoneCost,stamp:sc,total:Math.round(p*(1-(PC.disc[S.qty]||0)))};
+}
+const fmt=n=>n.toLocaleString('es-CL');
+
+function updatePrice(){
+  const p=calc();
+  document.getElementById('priceDisplay').textContent=fmt(p.total);
+  document.getElementById('pBase').textContent='$'+fmt(p.base);
+  document.getElementById('pColors').textContent='$'+fmt(p.colors);
+  document.getElementById('pZones').textContent='$'+fmt(p.zones);
+  document.getElementById('pStamp').textContent='$'+fmt(p.stamp);
+  document.getElementById('pUnit').textContent='$'+fmt(p.total);
+  document.getElementById('stampLbl').textContent=S.zone==='pecho_logo'?'Logo corporativo':'Tamaño del diseño';
+  document.getElementById('corpTag').classList.toggle('hidden',S.mode!=='corporativo');
+}
+
+const ZN={pecho_centro:'Pecho central',pecho_logo:'Logo izquierdo',espalda:'Espalda',manga:'Manga'};
+const SN={small:'Pequeño ≤10cm',medium:'Mediano 10–20cm',large:'Grande 20–30cm',xlarge:'Full front 30+cm',logo:'Logo corporativo'};
+const DN={flame:'Llama FLAME',logo_text:'Logo FLAME',cross:'Cruz táctica',skull:'Calavera',dragon:'Dragón',lightning:'Rayo',custom:'Diseño propio'};
+
+function updateSummary(){
+  document.getElementById('cfgGarment').textContent=PC.garments[S.garment].name;
+  document.getElementById('cfgZone').textContent=ZN[S.zone]||S.zone;
+  document.getElementById('cfgSize').textContent=SN[S.scale]||S.scale;
+  document.getElementById('cfgColors').textContent=S.colors;
+  document.getElementById('cfgDesign').textContent=DN[S.design]||S.design;
+}
+
+function updateUI(){
+  const inPecho=S.zone==='pecho_centro'||S.zone==='pecho_logo';
+  document.getElementById('subZones').classList.toggle('hidden',!inPecho);
+  document.getElementById('sizeWrap').classList.toggle('hidden',S.zone!=='pecho_centro');
+  document.querySelectorAll('.sub-btn').forEach(b=>{b.classList.toggle('active',b.dataset.sub===S.zone);b.setAttribute('aria-pressed',String(b.dataset.sub===S.zone));});
+  const badge=document.getElementById('zoneBadge');
+  badge.textContent={pecho_centro:'Pecho central · tamaño libre',pecho_logo:'Logo pecho izquierdo · ~8×8 cm · corporativo',espalda:'Espalda',manga:'Manga'}[S.zone]||S.zone;
+  badge.classList.toggle('corp',S.zone==='pecho_logo');
+}
+
+function render(){
+  drawMockup(S.garment,S.color);
+  addDesign(S.design==='custom'?'flame':S.design);
+  updateUI();updatePrice();updateSummary();
+}
+render();
+
+/* ═══════════════════════════════════════
+   EVENTS
+═══════════════════════════════════════ */
+document.querySelectorAll('.mode-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.mode-btn').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-checked','false');});
+    b.classList.add('active');b.setAttribute('aria-checked','true');
+    S.mode=b.dataset.mode;
+    const d=document.getElementById('modeDesc');
+    if(S.mode==='corporativo'){
+      d.textContent='Logo de empresa o academia en el costado izquierdo del pecho. Ideal para uniformes y equipos corporativos.';
+      S.zone='pecho_logo';S.zones=new Set(['pecho_logo']);S.scale='logo';
+      document.querySelectorAll('.z-tab').forEach(t=>{t.classList.toggle('active',t.dataset.zone==='pecho_centro');t.setAttribute('aria-selected',String(t.dataset.zone==='pecho_centro'));});
+    } else {
+      d.textContent='Diseño centrado en pecho, espalda o manga. Ideal para marcas y equipos deportivos.';
+      S.zone='pecho_centro';S.zones=new Set(['pecho_centro']);S.scale='medium';
+      document.querySelectorAll('.z-tab').forEach(t=>{t.classList.toggle('active',t.dataset.zone==='pecho_centro');t.setAttribute('aria-selected',String(t.dataset.zone==='pecho_centro'));});
+      document.querySelectorAll('.sz-btn').forEach(t=>{t.classList.toggle('active',t.dataset.size==='medium');t.setAttribute('aria-checked',String(t.dataset.size==='medium'));});
+    }
+    updateUI();drawMockup(S.garment,S.color);addDesign(S.design==='custom'?'flame':S.design);updatePrice();updateSummary();
+    showToast(S.mode==='corporativo'?'Modo corporativo activado':'Modo deportivo activado');
+  });
+});
+
+document.querySelectorAll('.g-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.g-btn').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-checked','false');});
+    b.classList.add('active');b.setAttribute('aria-checked','true');
+    S.garment=b.dataset.garment;S.zones=new Set([S.zone]);
+    render();showToast('Prenda: '+PC.garments[S.garment].name);
+  });
+});
+
+document.querySelectorAll('.swatch').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    document.querySelectorAll('.swatch').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-checked','false');});
+    sw.classList.add('active');sw.setAttribute('aria-checked','true');
+    S.color=sw.dataset.color;
+    drawMockup(S.garment,S.color);drawGuide();
+    if(aObj){cv.bringToFront(aObj);cv.renderAll();}
+  });
+  sw.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sw.click();}});
+});
+
+document.querySelectorAll('.z-tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.z-tab').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-selected','false');});
+    t.classList.add('active');t.setAttribute('aria-selected','true');
+    const raw=t.dataset.zone;
+    if(raw==='pecho_centro'){S.zone=S.mode==='corporativo'?'pecho_logo':'pecho_centro';}
+    else S.zone=raw;
+    S.zones.add(S.zone);
+    updateUI();drawGuide();reposition();updatePrice();updateSummary();
+  });
+});
+
+document.querySelectorAll('.sub-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    S.zone=b.dataset.sub;
+    S.zones=new Set([S.zone]);
+    const corp=S.zone==='pecho_logo';
+    S.mode=corp?'corporativo':'deportivo';
+    if(corp) S.scale='logo';
+    else if(S.scale==='logo') S.scale='medium';
+    document.querySelectorAll('.mode-btn').forEach(x=>{x.classList.toggle('active',x.dataset.mode===S.mode);x.setAttribute('aria-checked',String(x.dataset.mode===S.mode));});
+    document.getElementById('modeDesc').textContent=corp?'Logo de empresa o academia en el costado izquierdo del pecho.':'Diseño centrado en pecho, espalda o manga.';
+    if(!corp) syncSizeBtns();
+    updateUI();drawGuide();
+    addDesign(S.design==='custom'?'flame':S.design);
+    updatePrice();updateSummary();
+    showToast(corp?'Logo izquierdo · Corporativo':'Pecho central · tamaño libre');
+  });
+});
+
+document.querySelectorAll('.sz-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.sz-btn').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-checked','false');});
+    b.classList.add('active');b.setAttribute('aria-checked','true');
+    S.scale=b.dataset.size;
+    drawGuide();
+    if(aObj){
+      const box=getActiveBox();
+      const sc=Math.min(box.w/aObj.width,box.h/aObj.height)*0.75;
+      aObj.scale(sc);aObj.set({left:box.cx,top:box.cy});
+      cv.bringToFront(aObj);cv.renderAll();
+    }
+    updatePrice();updateSummary();
+    const ln={small:'Pequeño ≤10cm',medium:'Mediano 10–20cm',large:'Grande 20–30cm',xlarge:'Full front 30+cm'};
+    showToast('Tamaño: '+(ln[S.scale]||S.scale));
+  });
+});
+
+document.querySelectorAll('.d-thumb').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.d-thumb').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');S.design=t.dataset.design;
+    addDesign(S.design);updateSummary();
+  });
+});
+
+document.getElementById('colorsMinus').addEventListener('click',()=>{if(S.colors<=1)return;S.colors--;document.getElementById('colorsVal').textContent=S.colors;updatePrice();updateSummary();});
+document.getElementById('colorsPlus').addEventListener('click',()=>{if(S.colors>=8)return;S.colors++;document.getElementById('colorsVal').textContent=S.colors;updatePrice();updateSummary();});
+
+document.querySelectorAll('.qty-t').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.qty-t').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-checked','false');});
+    t.classList.add('active');t.setAttribute('aria-checked','true');S.qty=parseInt(t.dataset.qty);updatePrice();
+  });
+  t.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();t.click();}});
+});
+
+document.querySelectorAll('.v-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.v-btn').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-pressed','false');});
+    b.classList.add('active');b.setAttribute('aria-pressed','true');
+    showToast('Vista '+(b.dataset.view==='front'?'frontal':'trasera'));
+  });
+});
+
+function reposition(){
+  if(!aObj)return;
+  const box=getActiveBox();
+  aObj.set({left:box.cx,top:box.cy,borderColor:box.corp?'rgba(59,130,246,.7)':'rgba(255,42,42,.7)',cornerColor:box.corp?'#3b82f6':'#ff2a2a'});
+  cv.bringToFront(aObj);cv.renderAll();
+}
+
+document.getElementById('btnDelete').addEventListener('click',()=>{const o=cv.getActiveObject();if(o&&o.isDsgn){cv.remove(o);aObj=null;document.querySelectorAll('.d-thumb').forEach(t=>t.classList.remove('active'));cv.renderAll();showToast('Elemento eliminado');}});
+document.getElementById('btnFlip').addEventListener('click',()=>{const o=cv.getActiveObject()||aObj;if(o){o.set('flipX',!o.flipX);cv.renderAll();showToast('Diseño volteado');}});
+document.getElementById('btnCenter').addEventListener('click',()=>{reposition();showToast('Diseño centrado');});
+
+function doExport(){const u=cv.toDataURL({format:'png',quality:1,multiplier:2});const a=document.createElement('a');a.href=u;a.download='flame-custom.png';a.click();showToast('Imagen exportada ✓');}
+document.getElementById('btnExport').addEventListener('click',doExport);
+document.getElementById('btnExportPreview').addEventListener('click',doExport);
+
+/* MODAL */
+const mOv=document.getElementById('modalOv');
+function openModal(){
+  const p=calc();
+  document.getElementById('mG').textContent=PC.garments[S.garment].name;
+  document.getElementById('mD').textContent=(ZN[S.zone]||S.zone)+' · '+(DN[S.design]||S.design);
+  document.getElementById('mSz').textContent=SN[S.scale]||S.scale;
+  document.getElementById('mC').textContent=S.colors+' colores';
+  document.getElementById('mT').textContent='$'+fmt(p.total)+' c/u';
+  mOv.classList.add('open');document.body.style.overflow='hidden';
+  document.getElementById('mContent').style.display='';document.getElementById('mSuccess').classList.remove('show');
+}
+function closeModal(){mOv.classList.remove('open');document.body.style.overflow='';}
+document.getElementById('btnQuote').addEventListener('click',openModal);
+document.getElementById('mClose').addEventListener('click',closeModal);
+document.getElementById('mSuccessClose').addEventListener('click',closeModal);
+mOv.addEventListener('click',e=>{if(e.target===mOv)closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mOv.classList.contains('open'))closeModal();});
+document.getElementById('quoteForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  const n=document.getElementById('q-n').value.trim();
+  const em=document.getElementById('q-e').value.trim();
+  if(!n||!em){showToast('Completa nombre y email');return;}
+  const s=this.querySelector('.m-submit');const orig=s.textContent;s.textContent='Enviando…';s.disabled=true;
+  setTimeout(()=>{document.getElementById('mContent').style.display='none';document.getElementById('mSuccess').classList.add('show');s.textContent=orig;s.disabled=false;this.reset();},1400);
+});
+
+/* TOAST */
+let tTm;const tEl=document.getElementById('toast');
+function showToast(msg,dur=2000){clearTimeout(tTm);tEl.textContent=msg;tEl.classList.add('show');tTm=setTimeout(()=>tEl.classList.remove('show'),dur);}
+
+/* RESIZE */
+let rsz;
+window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{const ns=getSize();if(Math.abs(ns-cv.getWidth())>26){cv.setWidth(ns);cv.setHeight(ns);render();}},220);});
+
+})();
+</script>
+</body>
+</html>
